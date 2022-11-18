@@ -32,14 +32,25 @@ export default async function* runExecutor(
     await browserExecutor(browserOptions, context).next();
 
     const projectRoot = await getProjectRoot(context);
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { default: nuxtConfig } = require(path.join(
+      projectRoot,
+      'nuxt.config.js'
+    ));
+    const nuxtConfigGenerateDir =
+      nuxtConfig.generate && nuxtConfig.generate.dir;
 
     const config = await loadNuxtConfig({
       rootDir: projectRoot,
       configOverrides: {
         dev: false,
-        buildDir: path.join(context.root, browserOptions.buildDir, '.nuxt'),
+        buildDir: nuxtConfigGenerateDir
+          ? path.join(nuxtConfigGenerateDir, '.nuxt')
+          : path.join(context.root, browserOptions.buildDir, '.nuxt'),
         generate: {
-          dir: path.join(context.root, browserOptions.buildDir, 'dist'),
+          dir: nuxtConfigGenerateDir
+            ? nuxtConfigGenerateDir
+            : path.join(context.root, browserOptions.buildDir, 'dist'),
         },
         build: {
           extend(
@@ -47,12 +58,6 @@ export default async function* runExecutor(
             ctx: Record<string, unknown>
           ) {
             modifyTypescriptAliases(config, projectRoot);
-
-            // eslint-disable-next-line @typescript-eslint/no-var-requires
-            const { default: nuxtConfig } = require(path.join(
-              projectRoot,
-              'nuxt.config.js'
-            ));
 
             if (nuxtConfig.build && nuxtConfig.build.extend) {
               nuxtConfig.build.extend(config, ctx);
